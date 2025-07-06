@@ -81,7 +81,7 @@ export function getConfig({
     emailAndPassword: {
       enabled: true,
       autoSignIn: false,
-      requireEmailVerification: true,
+      requireEmailVerification: false,
       sendResetPassword: async ({ url, user }) => {
         try {
           await authService.resetPassword({ url, userId: user.id });
