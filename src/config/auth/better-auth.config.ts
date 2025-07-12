@@ -61,22 +61,15 @@ export function getConfig({
     secret: authConfig.authSecret,
     baseURL: appConfig.url,
     plugins,
+    // Prisma handles the database connection directly
+    // We'll use the connection URL if provided, otherwise construct it from individual parameters
     database: new Pool({
-      database: databaseConfig.database,
-      user: databaseConfig.username,
-      password: databaseConfig.password,
-      host: databaseConfig.host,
-      port: databaseConfig.port,
-      ...(typeof databaseConfig.ssl === 'object'
-        ? {
-            ssl: {
-              rejectUnauthorized: databaseConfig.ssl?.rejectUnauthorized,
-              ca: databaseConfig.ssl?.ca,
-              key: databaseConfig.ssl?.key,
-              cert: databaseConfig.ssl?.cert,
-            },
-          }
-        : {}),
+      connectionString:
+        databaseConfig.url ||
+        `postgres://${databaseConfig.username}:${databaseConfig.password}@${databaseConfig.host}:${databaseConfig.port}/${databaseConfig.name}`,
+      // SSL is typically configured in the connection string or environment variables
+      // with Prisma, but we'll keep the SSL options for backward compatibility
+      ...(databaseConfig.ssl ? { ssl: databaseConfig.ssl } : {}),
     }),
     emailAndPassword: {
       enabled: true,

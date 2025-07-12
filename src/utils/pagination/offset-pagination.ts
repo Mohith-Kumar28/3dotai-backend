@@ -1,28 +1,44 @@
 import { OffsetPaginationDto } from '@/common/dto/offset-pagination/offset-pagination.dto';
 import { PageOptionsDto } from '@/common/dto/offset-pagination/page-options.dto';
-import { SelectQueryBuilder } from 'typeorm';
+import { Prisma } from '@prisma/client';
+
+type PrismaModelDelegate = {
+  findMany: (args: any) => Promise<any[]>;
+  count: (args: any) => Promise<number>;
+};
+
+type PaginateOptions = {
+  where?: Record<string, any>;
+  orderBy?: Record<string, 'asc' | 'desc'> | Record<string, 'asc' | 'desc'>[];
+  include?: Record<string, any>;
+  select?: Record<string, any>;
+  skipCount?: boolean;
+  takeAll?: boolean;
+};
 
 export async function paginate<T>(
-  builder: SelectQueryBuilder<T>,
+  model: PrismaModelDelegate,
   pageOptionsDto: PageOptionsDto,
-  options?: Partial<{
-    skipCount: boolean;
-    takeAll: boolean;
-  }>,
+  options: PaginateOptions = {},
 ): Promise<[T[], OffsetPaginationDto]> {
-  if (!options?.takeAll) {
-    builder.skip(pageOptionsDto.offset).take(pageOptionsDto.limit);
-  }
+  const { skipCount = false, takeAll = false, ...prismaOptions } = options;
 
-  const entities: T[] = await builder.getMany();
+  // Build the findMany options
+  const findManyOptions: Prisma.MiddlewareParams['args'] = {
+    ...prismaOptions,
+    skip: takeAll ? undefined : pageOptionsDto.offset,
+    take: takeAll ? undefined : pageOptionsDto.limit,
+  };
 
-  let count = -1;
+  // Execute queries in parallel
+  const [items, total] = await Promise.all([
+    model.findMany(findManyOptions) as Promise<T[]>,
+    skipCount
+      ? Promise.resolve(-1)
+      : model.count({ where: prismaOptions.where }),
+  ]);
 
-  if (!options?.skipCount) {
-    count = await builder.getCount();
-  }
+  const metaDto = new OffsetPaginationDto(total as number, pageOptionsDto);
 
-  const metaDto = new OffsetPaginationDto(count, pageOptionsDto);
-
-  return [entities, metaDto];
+  return [items, metaDto];
 }

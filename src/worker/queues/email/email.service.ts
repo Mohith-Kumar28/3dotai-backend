@@ -1,8 +1,6 @@
-import { UserEntity } from '@/auth/entities/user.entity';
+import { PrismaService } from '@/database/prisma/prisma.service';
 import { MailService } from '@/shared/mail/mail.service';
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import {
   EmailVerificationJob,
   ResetPasswordJob,
@@ -15,16 +13,16 @@ export class EmailQueueService {
 
   constructor(
     private readonly mailService: MailService,
-    @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
+    private readonly prisma: PrismaService,
   ) {}
 
   async verifyEmail(data: EmailVerificationJob['data']): Promise<void> {
-    const user = await this.userRepository.findOne({
+    const user = await this.prisma.user.findUnique({
       where: { id: data.userId },
     });
     if (!user) {
       this.logger.error(`User id = ${data.userId} does not exist.`);
+      return;
     }
     await this.mailService.sendEmailVerificationMail({
       email: user.email,
@@ -33,10 +31,11 @@ export class EmailQueueService {
   }
 
   async sendMagicLink(data: SignInMagicLinkJob['data']): Promise<void> {
-    const user = await this.userRepository.findOne({
+    const user = await this.prisma.user.findUnique({
       where: { email: data.email },
     });
     if (!user) {
+      this.logger.warn(`User with email ${data.email} not found`);
       return;
     }
     await this.mailService.sendAuthMagicLinkMail({
@@ -46,10 +45,11 @@ export class EmailQueueService {
   }
 
   async resetPassword(data: ResetPasswordJob['data']): Promise<void> {
-    const user = await this.userRepository.findOne({
+    const user = await this.prisma.user.findUnique({
       where: { id: data.userId },
     });
     if (!user) {
+      this.logger.warn(`User with id ${data.userId} not found`);
       return;
     }
     await this.mailService.sendResetPasswordMail({

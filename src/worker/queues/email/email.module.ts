@@ -1,15 +1,14 @@
-import { UserEntity } from '@/auth/entities/user.entity';
 import { Queue } from '@/constants/job.constant';
+import { PrismaModule } from '@/database/prisma/prisma.module';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailQueueEvents } from './email.events';
 import { EmailProcessor } from './email.processor';
 import { EmailQueueService } from './email.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntity]),
+    PrismaModule,
     BullModule.registerQueue({
       name: Queue.Email,
       streams: {

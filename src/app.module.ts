@@ -1,6 +1,5 @@
 import appConfig from '@/config/app/app.config';
 import authConfig from '@/config/auth/auth.config';
-import databaseConfig from '@/config/database/database.config';
 import mailConfig from '@/config/mail/mail.config';
 import redisConfig from '@/config/redis/redis.config';
 import { BullBoardModule } from '@bull-board/nestjs';
@@ -11,7 +10,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import {
   AcceptLanguageResolver,
@@ -36,6 +34,7 @@ import { default as sentryConfig } from './config/sentry/sentry.config';
 import { default as throttlerConfig } from './config/throttler/throttler.config';
 import { default as useThrottlerFactory } from './config/throttler/throttler.factory';
 import { AppThrottlerGuard } from './config/throttler/throttler.guard';
+import { PrismaModule } from './database/prisma/prisma.module';
 import { default as useGraphqlFactory } from './graphql/graphql.factory';
 import { default as useI18nFactory } from './i18n/i18n.factory';
 import { CacheModule as CacheManagerModule } from './shared/cache/cache.module';
@@ -54,7 +53,6 @@ export class AppModule {
           isGlobal: true,
           load: [
             appConfig,
-            databaseConfig,
             redisConfig,
             authConfig,
             mailConfig,
@@ -77,17 +75,17 @@ export class AppModule {
           inject: [ConfigService],
           useFactory: useLoggerFactory,
         }),
-        TypeOrmModule.forRootAsync({
-          imports: [ConfigModule],
-          inject: [ConfigService],
-          useFactory: databaseConfig,
-        }),
+        PrismaModule,
         BullModule.forRootAsync({
           imports: [ConfigModule],
           inject: [ConfigService],
           useFactory: useBullFactory,
         }),
-        PrometheusModule.register(),
+        PrometheusModule.register({
+          defaultMetrics: {
+            enabled: true,
+          },
+        }),
         CacheManagerModule,
         MailModule,
       ],

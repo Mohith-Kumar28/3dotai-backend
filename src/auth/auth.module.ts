@@ -24,19 +24,22 @@ import {
   HOOK_KEY,
 } from '@/constants/auth.constant';
 import { Queue } from '@/constants/job.constant';
+import { PrismaModule } from '@/database/prisma/prisma.module';
 import { CacheModule } from '@/shared/cache/cache.module';
 import { CacheService } from '@/shared/cache/cache.service';
 import { ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { createAuthMiddleware } from 'better-auth/plugins';
 import type {
   FastifyInstance,
   FastifyReply as Reply,
   FastifyRequest as Request,
 } from 'fastify';
+
+import { USER_REPOSITORY } from './auth.constants';
 import { AuthService } from './auth.service';
 import { BetterAuthService } from './better-auth.service';
-import { UserEntity } from './entities/user.entity';
+import { PrismaUserRepository } from './repositories/prisma-user.repository';
 
 const HOOKS = [
   { metadataKey: BEFORE_HOOK_KEY, hookType: 'before' as const },
@@ -47,6 +50,7 @@ const HOOKS = [
 @Module({
   imports: [
     DiscoveryModule,
+    PrismaModule,
     BullModule.registerQueue({
       name: Queue.Email,
     }),
@@ -54,10 +58,15 @@ const HOOKS = [
       name: Queue.Email,
       adapter: BullMQAdapter,
     }),
-    TypeOrmModule.forFeature([UserEntity]),
   ],
-  providers: [AuthService],
-  exports: [AuthService],
+  providers: [
+    AuthService,
+    {
+      provide: USER_REPOSITORY,
+      useClass: PrismaUserRepository,
+    },
+  ],
+  exports: [AuthService, USER_REPOSITORY],
 })
 export class AuthModule implements NestModule, OnModuleInit {
   private logger = new Logger(this.constructor.name);

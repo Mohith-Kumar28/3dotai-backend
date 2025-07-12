@@ -11,8 +11,8 @@ import {
   StringFieldOptional,
 } from '@/decorators/field.decorators';
 import { ApiProperty } from '@nestjs/swagger';
+import { Role } from '@prisma/client';
 import { Exclude, Expose, Type } from 'class-transformer';
-import { Role } from '../user.enum';
 
 @Exclude()
 export class UserDto {

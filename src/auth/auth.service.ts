@@ -1,4 +1,3 @@
-import { GlobalConfig } from '@/config/config.type';
 import { Queue } from '@/constants/job.constant';
 import { CacheService } from '@/shared/cache/cache.service';
 import { CacheParam } from '@/shared/cache/cache.type';
@@ -7,13 +6,14 @@ import { InjectQueue } from '@nestjs/bullmq';
 import {
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { UserEntity } from './entities/user.entity';
+
+import { USER_REPOSITORY } from './auth.constants';
+import { IUserRepository } from './repositories/user.repository.interface';
 
 /**
  * NOTE: This service is for handling auth related tasks outside of Better Auth.
@@ -22,23 +22,16 @@ import { UserEntity } from './entities/user.entity';
 @Injectable()
 export class AuthService {
   constructor(
-    private configService: ConfigService<GlobalConfig>,
+    private readonly configService: ConfigService,
     @InjectQueue(Queue.Email)
     private readonly emailQueue: EmailQueue,
     private readonly cacheService: CacheService,
-    @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
+    @Inject(USER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
   ) {}
 
   async sendSigninMagicLink({ email, url }: { email: string; url: string }) {
-    const user = await this.userRepository.findOne({
-      where: {
-        email,
-      },
-      select: {
-        id: true,
-      },
-    });
+    const user = await this.userRepository.findByEmail(email);
     if (!user) {
       throw new NotFoundException('User not found.');
     }

@@ -70,3 +70,4 @@ docs/.vuepress/dist
 
 src/tmp/**/*
 !src/tmp/.gitkeep
+/generated/prisma
