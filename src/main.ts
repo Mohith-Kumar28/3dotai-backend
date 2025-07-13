@@ -78,35 +78,103 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
 
-  app.enableCors({
-    origin: configService.getOrThrow('app.corsOrigin', {
-      infer: true,
-    }),
-    methods: ['GET', 'PATCH', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'Accept',
-    ],
-    credentials: true,
+  // Get environment configuration
+  const env = configService.getOrThrow('app.nodeEnv', {
+    infer: true,
+  }) as Environment;
+  const isDevelopment = [Environment.Local, Environment.Development].includes(
+    env,
+  );
+  const port = configService.getOrThrow('app.port', {
+    infer: true,
   });
 
-  const env = configService.getOrThrow('app.nodeEnv', { infer: true });
+  // Configure CORS based on environment
+  const corsOptions = isDevelopment
+    ? {
+        // Development: Allow all origins with credentials
+        origin: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+        allowedHeaders: [
+          'Content-Type',
+          'Authorization',
+          'X-Requested-With',
+          'Accept',
+          'apollo-client-name',
+          'apollo-client-version',
+          'apollo-require-preflight',
+        ],
+        exposedHeaders: ['Authorization'],
+        credentials: true,
+        maxAge: 600, // 10 minutes
+      }
+    : {
+        // Production: Restrict to specific origins
+        origin: [
+          'https://studio.apollographql.com',
+          ...(configService.get('app.corsOrigin', { infer: true })
+            ? [configService.get('app.corsOrigin', { infer: true }) as string]
+            : []),
+        ],
+        methods: ['GET', 'POST', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        exposedHeaders: ['Authorization'],
+        credentials: true,
+        maxAge: 600, // 10 minutes
+      };
 
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: [
-            "'self'",
-            'https://cdn.jsdelivr.net/npm/@scalar/api-reference', // For Better Auth API Reference.
-          ],
-        },
+  // Apply CORS configuration
+  app.enableCors(corsOptions);
+
+  // Security headers configuration
+  const securityHeaders: Parameters<typeof helmet>[0] = {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "'unsafe-eval'",
+          'https://cdn.jsdelivr.net',
+          'https://embeddable-sandbox.cdn.apollographql.com',
+        ],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          'https://cdn.jsdelivr.net',
+          'https://embeddable-sandbox.cdn.apollographql.com',
+        ],
+        imgSrc: [
+          "'self'",
+          'data:',
+          'blob:',
+          'https://cdn.jsdelivr.net',
+          'https://embeddable-sandbox.cdn.apollographql.com',
+        ],
+        connectSrc: [
+          "'self'",
+          'ws:',
+          'wss:',
+          'https://api.apollographql.com',
+          'https://rover-graphql.api.apollographql.com',
+          `http://localhost:${port}`,
+          `http://127.0.0.1:${port}`,
+        ],
+        fontSrc: ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
+        frameSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        ...(isDevelopment ? {} : { upgradeInsecureRequests: [] }),
       },
-    }),
-  );
+    },
+    crossOriginEmbedderPolicy: false, // Required for Apollo Sandbox
+    crossOriginOpenerPolicy: { policy: 'same-origin' as const },
+    crossOriginResourcePolicy: { policy: 'cross-origin' as const },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' as const },
+  };
+
+  // Apply security headers
+  app.use(helmet(securityHeaders));
+
   // Static files
   app.useStaticAssets({
     root: path.join(__dirname, '..', 'src', 'tmp', 'file-uploads'),
