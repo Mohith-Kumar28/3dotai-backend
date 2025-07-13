@@ -2,22 +2,103 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+"""A user in the system"""
 type UserSchema {
+  """Unique identifier for the user"""
   id: ID!
-  email: String!
+
+  """Username, must be unique"""
   username: String!
+
+  """Display username, can be different from the login username"""
+  displayUsername: String
+
+  """Email address, must be unique"""
+  email: String!
+
+  """Whether the email has been verified"""
+  isEmailVerified: Boolean!
+
+  """User role for authorization"""
+  role: Role!
+
+  """User's first name"""
+  firstName: String
+
+  """User's last name"""
+  lastName: String
+
+  """URL to the user's profile image"""
+  image: String
+
+  """User's biography"""
   bio: String
+
+  """Whether two-factor authentication is enabled"""
+  twoFactorEnabled: Boolean!
+
+  """When the user was created"""
+  createdAt: DateTime!
+
+  """When the user was last updated"""
+  updatedAt: DateTime!
+
+  """When the user was deleted (soft delete)"""
+  deletedAt: DateTime
+
+  """Self reference to the user"""
   self: UserSchema!
 }
 
+"""User role for authorization"""
+enum Role {
+  User
+  Admin
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
 type Query {
+  """Get the currently authenticated user"""
   whoami: UserSchema!
+
+  """Get all users (paginated)"""
   getUsers: [UserSchema!]!
+
+  """Get a user by ID"""
   getUser(id: ID!): UserSchema!
 }
 
 type Mutation {
+  """Update user profile"""
+  updateProfile(id: String!, input: UpdateUserInput!): UserSchema!
+
+  """Delete a user"""
   deleteUser(input: DeleteUserInput!): UserSchema!
+}
+
+"""Input type for updating a user profile"""
+input UpdateUserInput {
+  """User's first name"""
+  firstName: String
+
+  """User's last name"""
+  lastName: String
+
+  """User's email address"""
+  email: String
+
+  """URL to the user's profile image"""
+  image: String
+
+  """User's biography"""
+  bio: String
+
+  """User's role"""
+  role: Role
 }
 
 input DeleteUserInput {

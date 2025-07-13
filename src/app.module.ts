@@ -29,6 +29,7 @@ import {
   default as bullConfig,
 } from './config/bull/bull.config';
 import { default as useBullFactory } from './config/bull/bull.factory';
+import databaseConfig from './config/database/database-config.type';
 import grafanaConfig from './config/grafana/grafana.config';
 import { default as sentryConfig } from './config/sentry/sentry.config';
 import { default as throttlerConfig } from './config/throttler/throttler.config';
@@ -61,6 +62,7 @@ export class AppModule {
             throttlerConfig,
             awsConfig,
             grafanaConfig,
+            databaseConfig,
           ],
           envFilePath: ['.env'],
         }),
