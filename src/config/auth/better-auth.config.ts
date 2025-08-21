@@ -61,11 +61,11 @@ export function getConfig({
     secret: authConfig.authSecret,
     baseURL: appConfig.url,
     plugins,
-    // Prisma handles the database connection directly
-    // We'll use the connection URL if provided, otherwise construct it from individual parameters
+    // Use DIRECT_URL for better-auth since it needs a direct PostgreSQL connection, not Prisma Accelerate
+    // Prisma Accelerate URLs (prisma+postgres://) are not compatible with the pg library used by better-auth
     database: new Pool({
       connectionString:
-        databaseConfig.url ||
+        process.env.DIRECT_URL ||
         `postgres://${databaseConfig.username}:${databaseConfig.password}@${databaseConfig.host}:${databaseConfig.port}/${databaseConfig.name}`,
       // SSL is typically configured in the connection string or environment variables
       // with Prisma, but we'll keep the SSL options for backward compatibility
