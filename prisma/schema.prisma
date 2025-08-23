@@ -1,6 +1,3 @@
-// Prisma Schema
-
-
 generator client {
   provider        = "prisma-client-js"
   output          = "../generated/prisma"
@@ -8,121 +5,121 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
 }
 
-// Base fields that are common to all models
 model BaseModel {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   @@map("base_model")
   @@ignore
 }
 
-// User model with authentication related fields
 model User {
-  id                 String         @id @default(uuid())
-  username           String         @unique
-  displayUsername    String?        @map("display_username")
-  email              String         @unique
-  isEmailVerified    Boolean        @default(false) @map("is_email_verified")
-  role               Role           @default(USER)
-  firstName          String?        @map("first_name")
-  lastName           String?        @map("last_name")
-  image              String?
-  bio                String?
-  twoFactorEnabled   Boolean        @default(false) @map("two_factor_enabled")
-  
-  // Relations
-  accounts          Account[]
-  sessions          Session[]
-  twoFactorAuths    TwoFactorAuth[] @relation("UserTwoFactorAuths")
-  passkeys          PassKey[]
-  
+  id               String          @id @default(uuid())
+  displayUsername  String?         
+  email            String          @unique
+  role             Role            @default(USER)
+  firstName        String?        
+  image            String?
+  bio              String?
+  twoFactorEnabled Boolean         @default(false)
+  name             String?
+  isEmailVerified    Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  deletedAt        DateTime?       @db.Timestamptz(6)
+  updatedAt        DateTime        @updatedAt 
+  username         String?
+  accounts         Account[]
+  passkeys         PassKey[]
+  sessions         Session[]
+  twoFactorAuths   TwoFactorAuth[] @relation("UserTwoFactorAuths")
+
   @@map("user")
 }
 
-// Account model for authentication providers
 model Account {
-  id                    String   @id @default(uuid())
-  userId                String   @map("user_id")
-  accountId             String   @map("account_id")
-  providerId            String   @map("provider_id")  // 'credential' or other OAuth providers
-  accessToken           String?  @map("access_token")
-  refreshToken          String?  @map("refresh_token")
-  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
-  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  id                    String    @id @default(uuid())
+  userId                String    
+  accountId             String    
+  providerId            String    
+  accessToken           String?   
+  refreshToken          String?   
+  accessTokenExpiresAt  DateTime? 
+  refreshTokenExpiresAt DateTime? 
   scope                 String?
-  idToken              String?  @map("id_token")
-  password             String?
-  
-  // Relations
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  idToken               String?   
+  password              String?
+  createdAt             DateTime  @default(now()) 
+  deletedAt             DateTime? @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt 
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("account")
 }
 
-// Session model for user sessions
 model Session {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
+  id        String    @id @default(uuid())
+  userId    String    
   token     String
-  expiresAt DateTime @map("expires_at")
-  ipAddress String?  @map("ip_address")
-  userAgent String?  @map("user_agent")
-  
-  // Relations
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  expiresAt DateTime  
+  ipAddress String?   
+  userAgent String?   
+  createdAt DateTime  @default(now()) 
+  deletedAt DateTime? @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt 
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("session")
 }
 
-// Two-factor authentication model
 model TwoFactorAuth {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
+  id          String    @id @default(uuid())
+  userId      String    
   secret      String?
-  backupCodes String?  @map("backup_codes")
-  
-  // Relations
-  user        User     @relation("UserTwoFactorAuths", fields: [userId], references: [id], onDelete: Cascade)
-  
+  backupCodes String?   
+  createdAt   DateTime  @default(now()) 
+  deletedAt   DateTime? @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt 
+  user        User      @relation("UserTwoFactorAuths", fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("two_factor")
 }
 
-// Passkey model for WebAuthn authentication
 model PassKey {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   name         String?
-  userId       String   @map("user_id")
-  publicKey    String   @map("public_key")
-  credentialID String   @map("credential_id")
+  userId       String    
+  publicKey    String    
+  credentialID String    
   counter      Int
-  deviceType   String   @map("device_type")
-  backedUp     Boolean  @map("backed_up")
+  deviceType   String    
+  backedUp     Boolean   
   transports   String
-  
-  // Relations
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  createdAt    DateTime  @default(now()) 
+  deletedAt    DateTime? @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt 
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("passkey")
 }
 
-// Verification model for email verification, password reset, etc.
 model Verification {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   identifier String
   value      String
-  expiresAt  DateTime @map("expires_at")
-  
+  expiresAt  DateTime  
+  createdAt  DateTime  @default(now()) 
+  deletedAt  DateTime? @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt 
+
   @@map("verification")
 }
 
-// Enums
 enum Role {
   USER
   ADMIN

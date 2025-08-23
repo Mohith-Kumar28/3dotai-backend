@@ -71,9 +71,10 @@ export function getConfig({
       // with Prisma, but we'll keep the SSL options for backward compatibility
       ...(databaseConfig.ssl ? { ssl: databaseConfig.ssl } : {}),
     }),
+
     emailAndPassword: {
       enabled: true,
-      autoSignIn: false,
+      autoSignIn: true,
       requireEmailVerification: false,
       sendResetPassword: async ({ url, user }) => {
         try {
@@ -93,7 +94,6 @@ export function getConfig({
     user: {
       modelName: 'user',
       fields: {
-        name: 'firstName',
         emailVerified: 'isEmailVerified',
       },
     },
