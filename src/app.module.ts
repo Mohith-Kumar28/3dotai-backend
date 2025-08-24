@@ -18,6 +18,7 @@ import {
   QueryResolver,
 } from 'nestjs-i18n';
 import { LoggerModule } from 'nestjs-pino';
+import tiktokConfig from './config/tiktok/tiktok.config';
 
 import { FastifyAdapter } from '@bull-board/fastify';
 import { GracefulShutdownModule } from 'nestjs-graceful-shutdown';
@@ -63,6 +64,7 @@ export class AppModule {
             awsConfig,
             grafanaConfig,
             databaseConfig,
+            tiktokConfig,
           ],
           envFilePath: ['.env'],
         }),

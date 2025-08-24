@@ -9,8 +9,9 @@
 /* eslint-disable */
 
 export enum Role {
-    Admin = "Admin",
-    User = "User"
+    ADMIN = "ADMIN",
+    SUPER_ADMIN = "SUPER_ADMIN",
+    USER = "USER"
 }
 
 export class DeleteUserInput {

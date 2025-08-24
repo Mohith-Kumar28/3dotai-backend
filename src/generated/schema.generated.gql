@@ -48,8 +48,9 @@ type UserSchema {
 
 """User role for authorization"""
 enum Role {
-  User
-  Admin
+  USER
+  ADMIN
+  SUPER_ADMIN
 }
 
 """

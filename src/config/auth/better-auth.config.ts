@@ -149,7 +149,7 @@ export function getConfig({
           return uuid();
         },
       },
-      cookiePrefix: 'TmVzdEpTIEJvaWxlcnBsYXRl',
+      cookiePrefix: 'better_auth',
     },
     // Use Redis for storing sessions
     secondaryStorage: {

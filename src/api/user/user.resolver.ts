@@ -30,13 +30,13 @@ export class UserResolver {
   }
 
   @Query(() => [UserSchema], { description: 'Get all users (paginated)' })
-  @Roles(Role.Admin)
+  @Roles(Role.ADMIN)
   async getUsers() {
     return this.userService.getAllUsers();
   }
 
   @Query(() => UserSchema, { description: 'Get a user by ID' })
-  @Roles(Role.Admin)
+  @Roles(Role.ADMIN)
   async getUser(@Args() { id }: GetUserArgs) {
     return this.userService.findOneUser(id);
   }
@@ -48,12 +48,12 @@ export class UserResolver {
     @CurrentUserSession('user') currentUser: { id: string; role: Role },
   ) {
     // Users can only update their own profile unless they're an admin
-    if (id !== currentUser.id && currentUser.role !== Role.Admin) {
+    if (id !== currentUser.id && currentUser.role !== Role.ADMIN) {
       throw new Error('Unauthorized');
     }
 
     // Only admins can update roles
-    if (input.role && currentUser.role !== Role.Admin) {
+    if (input.role && currentUser.role !== Role.ADMIN) {
       throw new Error('Insufficient permissions to update role');
     }
 
@@ -61,7 +61,7 @@ export class UserResolver {
   }
 
   @Mutation(() => UserSchema, { description: 'Delete a user' })
-  @Roles(Role.Admin)
+  @Roles(Role.ADMIN)
   async deleteUser(@Args('input') userInput: DeleteUserInput) {
     return this.userService.deleteUser(userInput.id);
   }

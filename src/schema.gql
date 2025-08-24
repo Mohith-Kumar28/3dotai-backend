@@ -32,8 +32,9 @@ type Query {
 
 """User role for authorization"""
 enum Role {
-  Admin
-  User
+  ADMIN
+  SUPER_ADMIN
+  USER
 }
 
 """Input type for updating a user profile"""

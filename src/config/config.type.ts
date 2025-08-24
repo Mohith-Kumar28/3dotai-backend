@@ -6,6 +6,7 @@ import { MailConfig } from '@/config/mail/mail-config.type';
 import { RedisConfig } from '@/config/redis/redis-config.type';
 import { SentryConfig } from '@/config/sentry/sentry-config.type';
 import { ThrottlerConfig } from '@/config/throttler/throttler-config.type';
+import { TikTokConfig } from '@/config/tiktok/tiktok-config.type';
 import { AppConfig } from './app/app-config.type';
 import { BullConfig } from './bull/bull-config.type';
 
@@ -20,4 +21,5 @@ export type GlobalConfig = {
   throttler: ThrottlerConfig;
   aws: AwsConfig;
   grafana: GrafanaConfig;
+  tiktok: TikTokConfig;
 };
