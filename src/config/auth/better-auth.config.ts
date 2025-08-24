@@ -4,7 +4,13 @@ import { CacheService } from '@/shared/cache/cache.service';
 import { validateUsername } from '@/utils/validators/username';
 import { ConfigService } from '@nestjs/config';
 import { APIError } from 'better-auth/api';
-import { magicLink, openAPI, twoFactor, username } from 'better-auth/plugins';
+import {
+  magicLink,
+  multiSession,
+  openAPI,
+  twoFactor,
+  username,
+} from 'better-auth/plugins';
 import { passkey } from 'better-auth/plugins/passkey';
 import { BetterAuthOptions, BetterAuthPlugin } from 'better-auth/types';
 import { Pool } from 'pg';
@@ -48,6 +54,7 @@ export function getConfig({
     passkey({
       rpName: appConfig.name,
     }),
+    multiSession(),
   ];
 
   // Plugins for development only
