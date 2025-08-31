@@ -71,3 +71,7 @@ docs/.vuepress/dist
 src/tmp/**/*
 !src/tmp/.gitkeep
 /generated/prisma
+
+
+#TikTok nodejs_sdk
+/nodejs_sdk

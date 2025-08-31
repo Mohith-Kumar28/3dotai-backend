@@ -11,7 +11,7 @@ export default registerAs(
       process.env.TIKTOK_BASE_URL || 'https://open-api.tiktokglobalshop.com',
     authUrl:
       process.env.TIKTOK_AUTH_URL ||
-      'https://services.tiktokshop.com/open/authorize',
+      'https://services.us.tiktokshop.com/open/authorize?service_id=7528600490319742725',
     tokenUrl:
       process.env.TIKTOK_TOKEN_URL ||
       'https://auth.tiktok-shops.com/api/v2/token/get',
