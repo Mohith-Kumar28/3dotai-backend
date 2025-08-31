@@ -1,5 +1,6 @@
-import { generateSign } from '@/common/utils/tiktok-signature.util';
 import { GlobalConfig } from '@/config/config.type';
+import { TikTokConfig } from '@/config/tiktok/tiktok-config.type';
+import { TikTokApiClientService } from '@/services/tiktok/tiktok-api-client.service';
 import {
   BadRequestException,
   Inject,
@@ -8,7 +9,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios, { AxiosResponse } from 'axios';
 import * as crypto from 'crypto';
 import {
   TikTokAuthCallbackDto,
@@ -19,20 +19,15 @@ import {
   ITikTokAuthRepository,
   TIKTOK_AUTH_REPOSITORY,
 } from './repositories/tiktok-auth.repository.interface';
-import {
-  TikTokApiResponse,
-  TikTokAuthState,
-  TikTokRefreshTokenRequest,
-  TikTokShopInfo,
-  TikTokTokenResponse,
-} from './types/tiktok.types';
+import { TikTokAuthState } from './types/tiktok.types';
 
 @Injectable()
 export class TikTokService {
-  private readonly tiktokConfig;
+  private readonly tiktokConfig: TikTokConfig;
 
   constructor(
     private readonly configService: ConfigService<GlobalConfig>,
+    private readonly tiktokApiClient: TikTokApiClientService,
     @Inject(TIKTOK_AUTH_REPOSITORY)
     private readonly tiktokAuthRepository: ITikTokAuthRepository,
   ) {
@@ -58,8 +53,8 @@ export class TikTokService {
     // Generate state for CSRF protection
     const state = this.generateState(userId);
 
-    // Build authorization URL with default scopes
-    const authUrl = `${this.tiktokConfig.authUrl}`;
+    // Get authorization URL from client
+    const authUrl = this.tiktokApiClient.getAuthorizationUrl();
 
     return { authUrl, state };
   }
@@ -79,11 +74,15 @@ export class TikTokService {
       }
     }
 
-    // Exchange authorization code for tokens
-    const tokenResponse = await this.exchangeCodeForTokens(dto.code);
+    // Exchange authorization code for tokens using client
+    const tokenResponse = await this.tiktokApiClient.exchangeCodeForTokens(
+      dto.code,
+    );
 
-    // Get shop information
-    const shopInfo = await this.getShopInfo(tokenResponse.access_token);
+    // Get shop information using client
+    const shopInfo = await this.tiktokApiClient.getShopInfo(
+      tokenResponse.access_token,
+    );
 
     // Calculate expiration dates
     const accessTokenExpiresAt = new Date(
@@ -164,7 +163,7 @@ export class TikTokService {
       throw new NotFoundException('No TikTok Shop connection found');
     }
 
-    await this.refreshAccessToken(auth.refreshToken, userId);
+    await this.refreshAccessTokenInternal(auth.refreshToken, userId);
   }
 
   /**
@@ -183,7 +182,7 @@ export class TikTokService {
     );
 
     if (now >= expiryBuffer) {
-      await this.refreshAccessToken(auth.refreshToken, userId);
+      await this.refreshAccessTokenInternal(auth.refreshToken, userId);
       const updatedAuth = await this.tiktokAuthRepository.findByUserId(userId);
       return updatedAuth!.accessToken;
     }
@@ -231,136 +230,16 @@ export class TikTokService {
   }
 
   /**
-   * Exchange authorization code for access tokens
-   */
-  private async exchangeCodeForTokens(
-    code: string,
-  ): Promise<TikTokTokenResponse> {
-    const params = {
-      app_key: this.tiktokConfig.clientId,
-      app_secret: this.tiktokConfig.clientSecret,
-      auth_code: code,
-      grant_type: 'authorized_code',
-    };
-
-    try {
-      const response: AxiosResponse<TikTokApiResponse<TikTokTokenResponse>> =
-        await axios.get(this.tiktokConfig.tokenUrl, {
-          params,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-      if (response.data.code !== 0) {
-        throw new BadRequestException(
-          `TikTok API error: ${response.data.message}`,
-        );
-      }
-
-      return response.data.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new BadRequestException(
-          `Failed to exchange code for tokens: ${error.message}`,
-        );
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Get shop information using access token
-   */
-  private async getShopInfo(accessToken: string): Promise<TikTokShopInfo> {
-    try {
-      // Generate timestamp for the request
-      const timestamp = Math.floor(Date.now() / 1000).toString();
-
-      // Prepare request config for signature generation
-      const requestConfig = {
-        url: `${this.tiktokConfig.baseUrl}/authorization/202309/shops`,
-        params: {
-          app_key: this.tiktokConfig.clientId,
-          timestamp,
-        },
-        headers: {
-          'x-tts-access-token': accessToken,
-          'Content-Type': 'application/json',
-        },
-      };
-
-      // Generate signature using the utility function
-      const sign = generateSign(requestConfig, this.tiktokConfig.clientSecret);
-
-      const response: AxiosResponse<
-        TikTokApiResponse<{ shops: TikTokShopInfo[] }>
-      > = await axios.get(
-        `${this.tiktokConfig.baseUrl}/authorization/202309/shops`,
-        {
-          params: {
-            app_key: this.tiktokConfig.clientId,
-            timestamp,
-            sign,
-          },
-          headers: {
-            'x-tts-access-token': accessToken,
-            'Content-Type': 'application/json',
-          },
-        },
-      );
-
-      if (response.data.code !== 0) {
-        throw new BadRequestException(
-          `TikTok API error: ${response.data.message}`,
-        );
-      }
-
-      const shops = response.data.data.shops;
-      if (!shops || shops.length === 0) {
-        throw new BadRequestException('No authorized shops found');
-      }
-
-      return shops[0]; // Return first shop (one shop per user as per requirement)
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new BadRequestException(
-          `Failed to get shop info: ${error.message}`,
-        );
-      }
-      throw error;
-    }
-  }
-
-  /**
    * Refresh access token using refresh token
    */
-  private async refreshAccessToken(
+  private async refreshAccessTokenInternal(
     refreshToken: string,
     userId: string,
   ): Promise<void> {
-    const params: TikTokRefreshTokenRequest = {
-      app_key: this.tiktokConfig.clientId,
-      app_secret: this.tiktokConfig.clientSecret,
-      refresh_token: refreshToken,
-      grant_type: 'refresh_token',
-    };
-
     try {
-      const response: AxiosResponse<TikTokApiResponse<TikTokTokenResponse>> =
-        await axios.get(this.tiktokConfig.tokenRefreshUrl, {
-          params,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+      const tokenData =
+        await this.tiktokApiClient.refreshAccessToken(refreshToken);
 
-      if (response.data.code !== 0) {
-        throw new BadRequestException(
-          `TikTok API error: ${response.data.message}`,
-        );
-      }
-
-      const tokenData = response.data.data;
       const accessTokenExpiresAt = new Date(
         Date.now() + tokenData.access_token_expire_in * 1000,
       );
@@ -375,12 +254,9 @@ export class TikTokService {
         refreshTokenExpiresAt,
       });
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new BadRequestException(
-          `Failed to refresh token: ${error.message}`,
-        );
-      }
-      throw error;
+      throw new BadRequestException(
+        `Failed to refresh token: ${error.message}`,
+      );
     }
   }
 }

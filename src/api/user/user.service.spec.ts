@@ -19,12 +19,13 @@ describe('UserService', () => {
 
   const mockUser: User = {
     id: '1',
+    name: 'Test User',
     username: 'testuser',
     email: 'test@example.com',
     firstName: 'Test',
     lastName: 'User',
     image: 'https://example.com/avatar.jpg',
-    role: 'User',
+    role: 'USER',
     isEmailVerified: true,
     twoFactorEnabled: false,
     createdAt: new Date(),

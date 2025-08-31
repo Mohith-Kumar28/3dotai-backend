@@ -1,4 +1,4 @@
-import { PrismaModule } from '@/database/prisma/prisma.module';
+import { TikTokServicesModule } from '@/services/tiktok/tiktok.module';
 import { Module } from '@nestjs/common';
 import { TikTokAuthRepository } from './repositories/tiktok-auth.repository';
 import { TIKTOK_AUTH_REPOSITORY } from './repositories/tiktok-auth.repository.interface';
@@ -6,7 +6,7 @@ import { TikTokController } from './tiktok.controller';
 import { TikTokService } from './tiktok.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [TikTokServicesModule],
   controllers: [TikTokController],
   providers: [
     TikTokService,
