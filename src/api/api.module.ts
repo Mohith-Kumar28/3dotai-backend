@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { FileModule } from './file/file.module';
 import { HealthModule } from './health/health.module';
-import { TikTokModule } from './tiktok/tiktok.module';
+import { TikTokModule } from './tiktok-auth/tiktok.module';
 import { UserModule } from './user/user.module';
 
 @Module({
