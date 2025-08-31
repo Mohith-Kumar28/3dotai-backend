@@ -159,6 +159,18 @@ describe('HealthController', () => {
         },
       );
 
+      (configServiceValue.getOrThrow as jest.Mock).mockImplementation(
+        (key: string) => {
+          if (key === 'app.url') return 'http://localhost:3000';
+          if (key === 'redis')
+            return {
+              host: 'localhost',
+              port: 6379,
+            };
+          return null;
+        },
+      );
+
       const healthCheckResult = {
         status: 'ok',
         info: {
@@ -205,7 +217,7 @@ describe('HealthController', () => {
       // Verify API docs health check in non-production
       expect(httpUseValue.pingCheck).toHaveBeenCalledWith(
         'api-docs',
-        'http://localhost:3000/api-docs',
+        'http://localhost:3000/swagger',
         { headers: {} },
       );
     });
