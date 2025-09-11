@@ -1,0 +1,1 @@
+ API: Get Attributes, Get Order Detail, Get Order Detail, Get Order List, Get Product, Get Transactions by Order, Get Transactions by Statement, Get Warehouse List, Get Withdrawals, Mark Package As Shipped, Partial Edit Product, Search Creator Affiliate Orders, Search Products, Search Seller Affiliate Orders, Upload File, Upload Product File has been upgraded. 
