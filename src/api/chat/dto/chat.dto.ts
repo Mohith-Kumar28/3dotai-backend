@@ -13,10 +13,10 @@ import {
   IsObject,
   IsOptional,
   IsString,
-  IsUUID,
   ValidateNested,
 } from 'class-validator';
 
+import { UIMessage } from 'ai';
 export class ToolCallDto {
   @ApiProperty({
     description: 'Unique identifier for the tool call',
@@ -65,25 +65,144 @@ export class ToolResultDto {
 export class MessagePartDto {
   @ApiProperty({
     description: 'Type of the message part',
+    enum: [
+      'text',
+      'reasoning',
+      'tool',
+      'dynamic-tool',
+      'source-url',
+      'source-document',
+      'file',
+      'step-start',
+    ],
     example: 'text',
   })
   @IsString()
   type: string;
 
-  @ApiProperty({
+  // Text and reasoning parts
+  @ApiPropertyOptional({
     description: 'Text content of the message part',
     example: 'Hello, how can I help you?',
   })
+  @IsOptional()
   @IsString()
-  text: string;
+  text?: string;
 
   @ApiPropertyOptional({
-    description: 'State of the message part (for assistant messages)',
+    description: 'State of the text/reasoning part',
+    enum: ['streaming', 'done'],
     example: 'done',
   })
   @IsOptional()
   @IsString()
-  state?: string;
+  state?: 'streaming' | 'done';
+
+  // Tool parts
+  @ApiPropertyOptional({
+    description: 'Tool name for tool parts',
+    example: 'get_tiktok_user_info',
+  })
+  @IsOptional()
+  @IsString()
+  toolName?: string;
+
+  @ApiPropertyOptional({
+    description: 'Tool call ID for tool parts',
+    example: 'call_123',
+  })
+  @IsOptional()
+  @IsString()
+  toolCallId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Input for tool parts',
+  })
+  @IsOptional()
+  input?: unknown;
+
+  @ApiPropertyOptional({
+    description: 'Output for tool parts',
+  })
+  @IsOptional()
+  output?: unknown;
+
+  @ApiPropertyOptional({
+    description: 'Error text for failed tool calls',
+    example: 'Tool execution failed',
+  })
+  @IsOptional()
+  @IsString()
+  errorText?: string;
+
+  // Source parts
+  @ApiPropertyOptional({
+    description: 'Source ID for source parts',
+    example: 'source_123',
+  })
+  @IsOptional()
+  @IsString()
+  sourceId?: string;
+
+  @ApiPropertyOptional({
+    description: 'URL for source-url parts',
+    example: 'https://example.com',
+  })
+  @IsOptional()
+  @IsString()
+  url?: string;
+
+  @ApiPropertyOptional({
+    description: 'Title for source parts',
+    example: 'Example Document',
+  })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  // File parts
+  @ApiPropertyOptional({
+    description: 'IANA media type of the file',
+    example: 'image/jpeg',
+  })
+  @IsOptional()
+  @IsString()
+  mediaType?: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional filename of the file',
+    example: 'image.jpg',
+  })
+  @IsOptional()
+  @IsString()
+  filename?: string;
+
+  // Provider metadata (optional for all parts)
+  @ApiPropertyOptional({
+    description: 'Provider metadata',
+  })
+  @IsOptional()
+  @IsObject()
+  providerMetadata?: any;
+
+  @ApiPropertyOptional({
+    description: 'Whether the output is preliminary (for tool parts)',
+  })
+  @IsOptional()
+  preliminary?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Whether the provider was executed (for tool parts)',
+  })
+  @IsOptional()
+  providerExecuted?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Call provider metadata (for tool parts)',
+  })
+  @IsOptional()
+  @IsObject()
+  callProviderMetadata?: any;
 }
 
 @Exclude()
@@ -92,19 +211,37 @@ export class ChatMessageDto {
     description: 'Unique identifier for the message',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  @IsOptional()
   @IsString()
   @Expose()
-  id?: string;
+  id: string;
 
   @ApiProperty({
     description: 'Role of the message sender',
-    enum: ['user', 'assistant', 'system', 'tool'],
+    enum: ['user', 'assistant', 'system'],
     example: 'user',
   })
-  @IsEnum(['user', 'assistant', 'system', 'tool'])
+  @IsEnum(['user', 'assistant', 'system'])
   @Expose()
-  role: 'user' | 'assistant' | 'system' | 'tool';
+  role: 'user' | 'assistant' | 'system';
+
+  @ApiProperty({
+    description:
+      'Parts array containing message content (matches UIMessage structure)',
+    type: [MessagePartDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MessagePartDto)
+  @Expose()
+  parts: MessagePartDto[];
+
+  @ApiPropertyOptional({
+    description: 'Metadata of the message',
+  })
+  @IsOptional()
+  @IsObject()
+  @Expose()
+  metadata?: unknown;
 
   @ApiPropertyOptional({
     description: 'Content of the message (for backward compatibility)',
@@ -116,18 +253,8 @@ export class ChatMessageDto {
   content?: string;
 
   @ApiPropertyOptional({
-    description: 'Parts array containing message content',
-    type: [MessagePartDto],
-  })
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => MessagePartDto)
-  @Expose()
-  parts?: MessagePartDto[];
-
-  @ApiPropertyOptional({
-    description: 'Tool calls made by the assistant',
+    description:
+      'Tool calls made by the assistant (deprecated - use parts array)',
     type: [ToolCallDto],
   })
   @IsOptional()
@@ -160,13 +287,19 @@ export class ChatMessageDto {
   // Transform parts to content for processing
   @Transform(({ obj }) => {
     if (obj.parts && obj.parts.length > 0) {
-      return obj.parts.map((part: MessagePartDto) => part.text).join(' ');
+      return obj.parts
+        .filter((part: MessagePartDto) => part.type === 'text' && part.text)
+        .map((part: MessagePartDto) => part.text)
+        .join(' ');
     }
     return obj.content;
   })
   get processedContent(): string {
     if (this.parts && this.parts.length > 0) {
-      return this.parts.map((part) => part.text).join(' ');
+      return this.parts
+        .filter((part) => part.type === 'text' && part.text)
+        .map((part) => part.text)
+        .join(' ');
     }
     return this.content || '';
   }

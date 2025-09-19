@@ -1,6 +1,11 @@
 import { openai } from '@ai-sdk/openai';
 import { Injectable, Logger } from '@nestjs/common';
-import { Experimental_Agent as Agent, streamText, ToolSet } from 'ai';
+import {
+  Experimental_Agent as Agent,
+  convertToModelMessages,
+  streamText,
+  ToolSet,
+} from 'ai';
 
 import { ChatMessageDto, StreamChatRequestDto } from './dto/chat.dto';
 
@@ -42,13 +47,12 @@ export class ChatService {
         `Starting streaming chat with agent, messages: ${messages.length}`,
       );
 
-      // Convert DTOs to AI SDK format
-      const aiMessages = this.convertMessagesToAIFormat(messages);
-
       // Use streamText with model configuration and tools
+
       const streamConfig: any = {
         model: openai(model),
-        messages: aiMessages,
+        //@ts-expect-error convertToModelMessages expects a UIMessage[] from ai import
+        messages: convertToModelMessages(messages),
         system: `You are a helpful TikTok assistant that can help users with TikTok-related tasks. 
           You can provide information about TikTok users, videos, trends, and analytics. 
           Always be friendly, informative, and focused on TikTok-related queries. 
@@ -77,17 +81,6 @@ export class ChatService {
         `Failed to start streaming chat: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
-  }
-
-  /**
-   * Convert chat message DTOs to AI SDK format
-   */
-  private convertMessagesToAIFormat(messages: ChatMessageDto[]) {
-    return messages.map((message) => ({
-      role: message.role as 'user' | 'assistant' | 'system',
-      content: this.extractMessageContent(message),
-      // TODO: Add tool calls and tool results when implementing tool support
-    }));
   }
 
   /**
