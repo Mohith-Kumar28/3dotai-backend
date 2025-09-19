@@ -24,7 +24,7 @@ export async function paginate<T>(
   const { skipCount = false, takeAll = false, ...prismaOptions } = options;
 
   // Build the findMany options
-  const findManyOptions: Prisma.MiddlewareParams['args'] = {
+  const findManyOptions: any = {
     ...prismaOptions,
     skip: takeAll ? undefined : pageOptionsDto.offset,
     take: takeAll ? undefined : pageOptionsDto.limit,

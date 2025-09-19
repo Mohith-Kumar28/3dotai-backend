@@ -55,7 +55,7 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService<GlobalConfig>);
 
-  await app.register(fastifyCookie, {
+  await app.register(fastifyCookie as any, {
     secret: configService.getOrThrow('auth.authSecret', {
       infer: true,
     }) as string,
@@ -224,7 +224,7 @@ async function bootstrap() {
         `/api/auth/reference`, // Better Auth Docs
       ];
       if (pathsToIntercept.some((path) => req.url.startsWith(path))) {
-        await basicAuthMiddleware(req, reply);
+        await basicAuthMiddleware(req as any, reply as any);
       }
     });
 
